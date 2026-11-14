@@ -175,8 +175,8 @@ export function computeSite(meta, vec, dem, hExtra = 2) {
 }
 
 // "Good landing dates" for a computed site: same logic as models.battery.landing_date_scan (14-day mission, daily starts)
-export function landingScan(d, missionDays = 14) {
-  const b = CFG.battery, step = d.step_min, dt = step / 60, per = Math.round(1440 / step)
+export function landingScan(d, missionDays = 14, b = CFG.battery) {
+  const step = d.step_min, dt = step / 60, per = Math.round(1440 / step)
   const len = missionDays * per, cap = b.capacity_wh, floor = (1 - b.dod_max) * cap, thr = 0.2 * b.load_day_w
   const days = []
   for (let s = 0; s + len < d.n; s += per) {

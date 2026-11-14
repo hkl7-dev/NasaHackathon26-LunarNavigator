@@ -13,6 +13,7 @@ export const TEXT = {
   metrics: 'Key numbers for this moment. Green means good for the mission, red means a problem. "Longest night" is the longest stretch of darkness the lander must survive on battery power.',
   timeline: 'The next 30 days at a glance. Yellow is sunlight, blue is Earth above the horizon, green is a working radio link. The lines show solar power and battery charge. Click anywhere to jump there.',
   landing: 'Every square in the calendar is one possible landing day. Green means a 14-day mission that lands that day keeps its battery alive and can talk to Earth in its first 48 hours; amber survives but with poor contact; red fails. The two charts show why: how low the battery gets, and how much Earth contact there is. If your launch slips, this shows which new dates still work, and the bottom chart shows which other sites are open on the same days.',
+  design: 'Change the spacecraft and watch every number re-run: a bigger battery rides out longer nights, a bigger array recharges faster, and heavier loads drain the pack sooner. This is the same power and battery model our Python engine uses, running live in your browser.',
   compare: 'Ticked sites side by side. Green marks the best value in each row. The trade-off is often sunlight versus Earth contact: few places have plenty of both.',
 }
 

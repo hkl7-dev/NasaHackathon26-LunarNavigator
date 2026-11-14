@@ -9,6 +9,9 @@ import Timeline from './components/Timeline.jsx'
 import Compare from './components/Compare.jsx'
 import LandingAnalysis from './components/LandingAnalysis.jsx'
 import { Callout, Intro } from './components/Explain.jsx'
+import DesignPanel from './components/DesignPanel.jsx'
+import Tour from './components/Tour.jsx'
+import { DEFAULT_DESIGN, PRESETS, applyDesign, isDefault, designKey } from './design.js'
 
 const SPEEDS = [1, 6, 24]  // hours advanced per animation tick
 const DEFAULT_MAST = 2
@@ -17,9 +20,14 @@ const DEFAULT_MAST = 2
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1))
   const num = (k) => (p.has(k) && isFinite(+p.get(k)) ? +p.get(k) : null)
-  return { site: p.get('site'), t: num('t'), mast: num('mast'), lat: num('lat'), lon: num('lon'), explain: p.get('explain') }
+  return { site: p.get('site'), t: num('t'), mast: num('mast'), lat: num('lat'), lon: num('lon'), explain: p.get('explain'), layer: p.get('layer'), design: p.get('design'), tour: p.has('tour') }
 }
 const START = readHash()
+function parseDesign(str) {
+  if (!str) return DEFAULT_DESIGN
+  const v = str.split('|').map(Number), keys = Object.keys(DEFAULT_DESIGN)
+  return v.length === keys.length && v.every(isFinite) ? Object.fromEntries(keys.map((k, j) => [k, v[j]])) : DEFAULT_DESIGN
+}
 
 async function analyse(meta, mast) {
   const [vec, dem] = await Promise.all([loadVectors(), loadDem()])
@@ -43,6 +51,9 @@ export default function App() {
   const [mast, setMast] = useState(START.mast ?? DEFAULT_MAST)
   const [override, setOverride] = useState(null)   // {id, mast, data} for a curated site at non-default height
   const [busy, setBusy] = useState(false)
+  const [layer, setLayer] = useState(START.layer || 'none')   // region-wide map overlay
+  const [design, setDesign] = useState(() => parseDesign(START.design))   // "design your lander" what-if
+  const [tour, setTour] = useState(START.tour ? 0 : null)   // guided demo step, null = off
 
   // Load the site index
   useEffect(() => {
@@ -82,7 +93,9 @@ export default function App() {
     return () => { alive = false; clearTimeout(timer) }
   }, [focus, mast, custom?.lat, custom?.lon, sites.length])
 
-  const site = override && override.id === focus && override.mast === mast ? override.data : focus ? cache[focus] : null
+  const baseSite = override && override.id === focus && override.mast === mast ? override.data : focus ? cache[focus] : null
+  const site = useMemo(() => applyDesign(baseSite, design), [baseSite, design])
+  const designedCache = useMemo(() => Object.fromEntries(Object.entries(cache).map(([k, d]) => [k, applyDesign(d, design)])), [cache, design])
   const n = site?.n ?? 1
   const stepMin = site?.step_min ?? 60
 
@@ -93,8 +106,10 @@ export default function App() {
     if (mast !== DEFAULT_MAST) p.set('mast', String(mast))
     if (custom) { p.set('lat', custom.lat.toFixed(3)); p.set('lon', custom.lon.toFixed(3)) }
     if (!explain) p.set('explain', '0')
+    if (layer !== 'none') p.set('layer', layer)
+    if (!isDefault(design)) p.set('design', designKey(design))
     history.replaceState(null, '', '#' + p.toString())
-  }, [focus, i, mast, custom, explain])
+  }, [focus, i, mast, custom, explain, layer, design])
 
   // Playback
   const raf = useRef()
@@ -129,6 +144,11 @@ export default function App() {
     setFocus('custom')
   }
 
+  const tourApi = {
+    focus: setFocus, mast: setMast, layer: setLayer, playing: setPlaying, speed: setSpeed, compare: setCompare,
+    design: (id) => setDesign(id ? PRESETS.find((p) => p.id === id).d : DEFAULT_DESIGN),
+  }
+
   const listed = custom ? [{ ...custom, summary: cache.custom?.summary }, ...sites] : sites
   const polarSite = site && demCovers(site.site.lat)
 
@@ -140,6 +160,7 @@ export default function App() {
           <p className="sub">Sun, Earth, power and comms at any lunar landing site and date. Terrain from LOLA, ephemeris validated against JPL Horizons.</p>
         </div>
         <div className="top-right">
+          <button className="btn primary" onClick={() => setTour(0)} title="A 2-minute guided walk through the app">▶ Demo tour</button>
           <button className={'btn toggle ' + (explain ? 'on' : '')} onClick={() => setExplain((v) => !v)}>{explain ? '✓ Explain mode' : 'Explain mode'}</button>
           <button className="btn" onClick={() => navigator.clipboard?.writeText(location.href)} title="Copy a link to exactly this view">🔗 Copy link</button>
           {site && <div className="now mono">{fmtDate(timeAt(site, i))}</div>}
@@ -150,7 +171,7 @@ export default function App() {
 
       <div className="layout">
         <aside className="side">
-          <PolarMap sites={sites} focus={focus} onFocus={setFocus} custom={custom} onPick={onPick} />
+          <div id="sec-map"><PolarMap sites={sites} focus={focus} onFocus={setFocus} custom={custom} onPick={onPick} layer={layer} onLayer={setLayer} /></div>
           <SiteList sites={listed} focus={focus} compare={compare} onFocus={setFocus} onToggle={toggleCompare} />
         </aside>
 
@@ -172,7 +193,7 @@ export default function App() {
 
           {site ? (
             <>
-              <section className="card">
+              <section className="card" id="sec-dome">
                 <div className="card-head">
                   <h2>{site.site.name}{busy && <span className="busy"> · computing…</span>}</h2>
                   <span className="muted mono">{site.site.lat.toFixed(2)}°, {site.site.lon.toFixed(2)}°E · {site.site.terrain ? 'LOLA terrain horizon' : 'smooth horizon (outside polar DEM)'}</span>
@@ -191,21 +212,24 @@ export default function App() {
               </section>
               <Callout on={explain} k="metrics" />
               <Metrics site={site} i={i} />
+              <Callout on={explain} k="design" />
+              <div id="sec-design"><DesignPanel design={design} onChange={setDesign} site={site} /></div>
               <section className="card">
                 <div className="card-head"><h2>Next 30 days</h2><span className="muted">click to jump</span></div>
                 <Callout on={explain} k="timeline" />
                 <Timeline site={site} i={i} onSeek={setI} />
               </section>
-              <section className="card">
-                <div className="card-head"><h2>When should we land?</h2><span className="muted">14-day mission from each possible landing day · hover for details, click to jump</span></div>
+              <section className="card" id="sec-landing">
+                <div className="card-head"><h2>When should we land?</h2><span className="muted">{design.mission_days}-day mission from each possible landing day · hover for details, click to jump</span></div>
                 <Callout on={explain} k="landing" />
-                <LandingAnalysis site={site} i={i} onSeek={setI} compare={compare} cacheSites={cache} />
+                <LandingAnalysis site={site} i={i} onSeek={setI} compare={compare} cacheSites={designedCache} />
               </section>
             </>
           ) : !error && <div className="card muted">{focus === 'custom' ? 'Analysing this point…' : 'Loading…'}</div>}
 
           {explain && compare.length > 1 && <Callout on k="compare" />}
-          <Compare ids={compare} cache={cache} i={i} />
+          <div id="sec-compare"><Compare ids={compare} cache={designedCache} i={i} /></div>
+          {tour != null && <Tour step={tour} setStep={setTour} api={tourApi} />}
         </main>
       </div>
     </div>

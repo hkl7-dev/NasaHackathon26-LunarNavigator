@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DATA } from '../lib.js'
+import { landingScan } from '../engine.js'
 
 // Advanced "good landing dates" analysis: launch windows, calendar heatmap, battery margin, Earth contact, multi-site
 const STATUS = {
-  good: { color: '#59d6a4', label: 'Good', icon: '✓', text: 'Survives 14 days and has Earth contact after landing' },
+  good: { color: '#59d6a4', label: 'Good', icon: '✓', text: 'Survives the whole mission and has Earth contact after landing' },
   warn: { color: '#ffb35c', label: 'Marginal', icon: '~', text: 'Survives, but weak Earth contact in the first 48 h' },
-  bad: { color: '#ff6b6b', label: 'Fails', icon: '✕', text: 'Battery runs below the safe floor within 14 days' },
+  bad: { color: '#ff6b6b', label: 'Fails', icon: '✕', text: 'Battery runs below the safe floor during the mission' },
 }
 const status = (d) => (!d.survives ? 'bad' : d.comms_48h > 0.8 ? 'good' : 'warn')
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -18,8 +19,10 @@ function useLanding(site, id) {
     if (cache[id]) { setScan(cache[id]); return }
     setScan(null)
     let alive = true
-    fetch(`${DATA}/extra/landing_${id}.json`).then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d) cache[id] = d; if (alive) setScan(d) }).catch(() => alive && setScan(null))
+    // precomputed file from the Python pipeline if present, otherwise the same scan run in the browser
+    const local = () => (site ? landingScan(site) : null)
+    fetch(`${DATA}/extra/landing_${id}.json`).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((d) => { d = d?.days ? d : local(); if (d) cache[id] = d; if (alive) setScan(d) })
     return () => { alive = false }
   }, [id, site])
   return scan
@@ -173,7 +176,7 @@ function MultiSite({ ids, cacheSites, i, onSeek, refDays }) {
 export default function LandingAnalysis({ site, i, onSeek, compare, cacheSites }) {
   const scan = useLanding(site, site.site.id)
   const days = useMemo(() => (scan ? enrich(scan) : null), [scan])
-  if (!days) return <p className="muted">Landing-date data not generated yet (run <code>python -m analysis.landing_dates</code>).</p>
+  if (!days) return <p className="muted">Working out landing dates…</p>
 
   const counts = days.reduce((a, d) => ({ ...a, [d.st]: (a[d.st] || 0) + 1 }), {})
   const win = longestWindow(days)
@@ -204,7 +207,7 @@ export default function LandingAnalysis({ site, i, onSeek, compare, cacheSites }
 
       <Calendar days={days} i={i} onSeek={onSeek} />
       <div className="two">
-        <MarginChart days={days} i={i} onSeek={onSeek} title="Battery margin: lowest charge during a 14-day mission" get={(d) => d.min_soc}
+        <MarginChart days={days} i={i} onSeek={onSeek} title={`Battery margin: lowest charge during a ${scan.mission_days ?? 14}-day mission`} get={(d) => d.min_soc}
           floor={0.2} floorLabel="safe floor 20%" color="#c89bff" />
         <MarginChart days={days} i={i} onSeek={onSeek} title="Earth contact in the first 48 hours after landing" get={(d) => d.comms_48h}
           floor={0.8} floorLabel="needed 80%" color="#5ea9ff" />

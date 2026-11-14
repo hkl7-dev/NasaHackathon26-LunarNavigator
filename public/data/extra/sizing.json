@@ -1,0 +1,56 @@
+[
+  {
+    "site": "apollo11",
+    "name": "Apollo 11 Tranquility Base",
+    "min_battery_wh": 22148.220252990723,
+    "battery_kg": 147.65480168660483
+  },
+  {
+    "site": "apollo17",
+    "name": "Apollo 17 Taurus\u2013Littrow",
+    "min_battery_wh": 22480.73723614216,
+    "battery_kg": 149.87158157428107
+  },
+  {
+    "site": "chandrayaan3",
+    "name": "Chandrayaan-3 Shiv Shakti point",
+    "min_battery_wh": 19431.571692228317,
+    "battery_kg": 129.54381128152212
+  },
+  {
+    "site": "change6",
+    "name": "Chang'e-6 (Apollo basin, far side)",
+    "min_battery_wh": 23692.441871762276,
+    "battery_kg": 157.94961247841516
+  },
+  {
+    "site": "haworth",
+    "name": "Haworth crater floor (permanent shadow)",
+    "min_battery_wh": null,
+    "battery_kg": null
+  },
+  {
+    "site": "im1_malapert_a",
+    "name": "IM-1 Odysseus (Malapert A)",
+    "min_battery_wh": 23536.57025396824,
+    "battery_kg": 156.91046835978827
+  },
+  {
+    "site": "malapert_massif",
+    "name": "Malapert Massif",
+    "min_battery_wh": 24459.18796658516,
+    "battery_kg": 163.06125311056772
+  },
+  {
+    "site": "mons_mouton",
+    "name": "Mons Mouton (IM-2 / ex-VIPER)",
+    "min_battery_wh": 24362.980553507805,
+    "battery_kg": 162.4198703567187
+  },
+  {
+    "site": "shackleton_ridge",
+    "name": "Shackleton\u2013de Gerlache ridge",
+    "min_battery_wh": 23432.302364706993,
+    "battery_kg": 156.21534909804663
+  }
+]

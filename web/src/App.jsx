@@ -7,7 +7,7 @@ import SkyDome from './components/SkyDome.jsx'
 import Metrics from './components/Metrics.jsx'
 import Timeline from './components/Timeline.jsx'
 import Compare from './components/Compare.jsx'
-import LandingStrip from './components/LandingStrip.jsx'
+import LandingAnalysis from './components/LandingAnalysis.jsx'
 import { Callout, Intro } from './components/Explain.jsx'
 
 const SPEEDS = [1, 6, 24]  // hours advanced per animation tick
@@ -197,9 +197,9 @@ export default function App() {
                 <Timeline site={site} i={i} onSeek={setI} />
               </section>
               <section className="card">
-                <div className="card-head"><h2>Good landing dates</h2><span className="muted">14-day mission · click to pick a date</span></div>
+                <div className="card-head"><h2>When should we land?</h2><span className="muted">14-day mission from each possible landing day · hover for details, click to jump</span></div>
                 <Callout on={explain} k="landing" />
-                <LandingStrip site={site} i={i} onSeek={setI} />
+                <LandingAnalysis site={site} i={i} onSeek={setI} compare={compare} cacheSites={cache} />
               </section>
             </>
           ) : !error && <div className="card muted">{focus === 'custom' ? 'Analysing this point…' : 'Loading…'}</div>}

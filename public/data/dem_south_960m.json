@@ -1,0 +1,9 @@
+{
+ "size": 953,
+ "pixel_m": 960.0,
+ "x0": -457440.0,
+ "y0": 457440.0,
+ "R": 1737400.0,
+ "units": "metres above 1737.4 km sphere",
+ "projection": "south polar stereographic, lon 0 up"
+}

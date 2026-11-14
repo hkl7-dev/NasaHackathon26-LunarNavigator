@@ -70,3 +70,21 @@ code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: va
 .btn.small { padding: 3px 8px; font-size: 12px; }
 .busy { color: var(--accent); font-weight: 400; font-size: 13px; }
 .polar { cursor: crosshair; }
+/* Landing analysis */
+.landing { display: flex; flex-direction: column; gap: 14px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.tile { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.chart-block { position: relative; }
+.chart-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; margin-bottom: 4px; gap: 8px; flex-wrap: wrap; }
+.chart { width: 100%; display: block; cursor: pointer; }
+.chart .cell:hover { opacity: 1; stroke: #fff; stroke-width: 1; }
+.seg { display: flex; gap: 4px; }
+.btn.small.on { background: var(--accent); color: #111; border-color: var(--accent); }
+.two { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.tip { position: absolute; pointer-events: none; background: #0b0e16f2; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12px; z-index: 5; min-width: 200px; box-shadow: 0 6px 20px #0008; }
+.tip-row { display: flex; gap: 8px; align-items: center; padding: 1px 0; }
+.tip-row strong { color: var(--text); font-family: 'JetBrains Mono', monospace; }
+.tip-row span { color: var(--muted); }
+.tip-key { width: 12px; height: 3px; border-radius: 2px; flex: none; }

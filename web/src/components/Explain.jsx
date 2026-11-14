@@ -12,7 +12,7 @@ export const TEXT = {
   dome: 'This is the view from the landing site, looking all the way around (N, E, S, W). The grey shape is the real horizon from NASA\'s LOLA laser altimeter. The Sun (yellow) and Earth (blue) are drawn behind the terrain, so you can watch them set behind mountains. Press Play to see the Sun circle the horizon.',
   metrics: 'Key numbers for this moment. Green means good for the mission, red means a problem. "Longest night" is the longest stretch of darkness the lander must survive on battery power.',
   timeline: 'The next 30 days at a glance. Yellow is sunlight, blue is Earth above the horizon, green is a working radio link. The lines show solar power and battery charge. Click anywhere to jump there.',
-  landing: 'Each thin bar is one possible landing day. Green means a 14-day mission landing that day keeps its battery alive and can talk to Earth for the first 48 hours. Red means it wouldn\'t. If your launch slips, this shows which new dates still work.',
+  landing: 'Every square in the calendar is one possible landing day. Green means a 14-day mission that lands that day keeps its battery alive and can talk to Earth in its first 48 hours; amber survives but with poor contact; red fails. The two charts show why: how low the battery gets, and how much Earth contact there is. If your launch slips, this shows which new dates still work, and the bottom chart shows which other sites are open on the same days.',
   compare: 'Ticked sites side by side. Green marks the best value in each row. The trade-off is often sunlight versus Earth contact: few places have plenty of both.',
 }
 

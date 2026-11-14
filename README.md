@@ -21,7 +21,7 @@ Missions to the lunar south pole (Artemis, CLPS) face extreme lighting: the Sun 
 | Name | Role |
 |---|---|
 | Hanok | Computer Science: ephemeris, terrain horizons, data pipeline, web app |
-| _Teammate_ | Electronic Engineering: power, battery and communications models |
+| Oliwier | Electronic Engineering: power, battery and communications models |
 
 ## Architecture
 ```

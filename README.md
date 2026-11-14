@@ -1,74 +1,60 @@
-# 🌒 Lunar Landing Site Navigator
 
-**NASA Space Apps Challenge 2026 · HackAthlone (TUS Athlone, Ireland)**
-Challenge: *Lunar Landing Site Navigator*
+# Lunar Landing Site Evaluator – Model Assumptions
 
-> Pick a landing site on the Moon and a date. Instantly see where the Sun and Earth are against the **real terrain horizon**, how much **power** your lander gets, whether its **battery survives the night**, and when it can **talk to Earth**. Compare sites side by side in seconds instead of hours.
+**Status:** Engineering estimates – not specifications for a particular lander.
 
-## Why
-Missions to the lunar south pole (Artemis, CLPS) face extreme lighting: the Sun skims the horizon, mountains cast shadows for days, and Earth bobs above and below the horizon every ~2 weeks. Tools like JPL Horizons, Quickmap and Moon Trek hold the data but are built for specialists. When a launch slips, planners need fast answers: *"Is a site 10 km away, or a date 2 weeks later, still viable?"*
+## 1. Physical constants
+- Solar constant: 1361 W/m² at 1 AU.
+- Seasonal variation: approximately ±3%, accounted for through Sun distance.
 
-## What it does
-- 🗺️ **Site picker:** curated Apollo, CLPS, Artemis III, ISRO and CNSA sites, plus custom coordinates
-- 📅 **Date slider and timeline:** scrub through lunar days; see "sunset in 3d 4h" and "Earthset in 19h"
-- 🌄 **Sky dome view:** Sun and Earth plotted over the LOLA-derived terrain horizon
-- ⚡ **Power and battery:** solar output for 3 panel configurations; longest night; battery mass needed
-- 📡 **Comms:** direct-to-Earth windows and achievable data rate (link budget)
-- ⚖️ **Compare:** 2 or 3 site and date combinations side by side
-- ✅ **Validated** against JPL Horizons (see `data/validation.json`)
+## 2. Solar power system
+- Panel orientation: Vertical tracking.
+- Solar array area: 2.0 m².
+- Solar cell efficiency: 30%.
+- System derating factor: 0.85.
+- Derating includes estimated packing, temperature, dust, degradation, wiring and MPPT losses.
+- Fixed panel azimuth: 0°, only applicable to vertical-fixed mode.
 
-## Team
-| Name | Role |
-|---|---|
-| Hanok | Computer Science: ephemeris, terrain horizons, data pipeline, web app |
-| Oliwier | Electronic Engineering: power, battery and communications models |
+## 3. Battery and power consumption
+- Battery capacity: 3000 Wh.
+- Initial state of charge: 100%.
+- Maximum depth of discharge: 80%.
+- Charging efficiency: 95%.
+- Discharging efficiency: 95%.
+- Daytime science load: 150 W.
+- Night survival load: 40 W.
+- Battery specific energy: 150 Wh/kg.
+- Minimum permitted state of charge: 20%.
 
-## Architecture
-```
-SPICE kernels + LOLA DEM
-        │
-engine/ephemeris.py ─┐
-engine/horizon.py   ─┼─► data/geometry/<site>.json   (contract A)
-engine/visibility.py ┘            │
-                                  ▼
-          models/power.py, battery.py, comms.py   (contract B)
-                                  │
-engine/build.py ─────────────────► public/data/<site>.json + sites.json (contract C)
-                                  │
-                         web/ (React app reads static JSON)
-```
-Everything heavy is **precomputed**, so the web app is a fast static site with no backend.
-Full field definitions: [`docs/CONTRACTS.md`](docs/CONTRACTS.md).
+## 4. Communications system
+- Frequency band: X-band.
+- Operating frequency: 8.45 GHz.
+- Transmitter RF power: 15 W.
+- Transmitter antenna gain: 20 dBi.
+- Transmission losses: 2 dB.
+- Receiver G/T: 53 dB/K.
+- Required Eb/N0: 2.5 dB.
+- Link margin: 3 dB.
+- Minimum Earth elevation above terrain horizon: 1°.
+- Maximum hardware data rate: 2 Mbps.
+- Assumed receiver: DSN 34 m beam-waveguide station.
 
-## Quick start
-```bash
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+## 5. Dataset
+- Current Haworth dataset is synthetic test data.
+- It is used to verify software integration.
+- It must not be treated as actual lunar environmental measurements.
 
-# 1. Download data (see docs/DATA_SOURCES.md): SPICE kernels -> engine/kernels/, LOLA DEM -> dem/
-# 2. Geometry for all sites (Sun/Earth + terrain horizon)
-python -m engine.run_geometry            # add --no-terrain to skip the DEM
-# 3. Validate against JPL Horizons
-python -m engine.validate
-# 4. Power, battery and comms, then export for the web app
-python -m engine.build
-# Tests for the EE models
-pytest models -q
-```
+## 6. Limitations
+- Solar generation depends on simplified illumination and panel-orientation models.
+- Battery thermal behaviour and detailed battery ageing are not modelled.
+- Communications use a simplified link-budget calculation.
+- Hardware parameters are engineering estimates, not validated flight-system specifications.
 
-## Data sources
-- **JPL DE421 ephemeris** and **NAIF lunar frame kernels** (Mean Earth frame), via [Skyfield](https://rhodesmill.org/skyfield/)
-- **LOLA** (Lunar Orbiter Laser Altimeter) polar DEM, from the PDS Geosciences Node
-- **JPL Horizons API**, for validation
-- **LROC Quickmap** and **NASA Moon Trek**, for visual cross-checks
+## 7. Mentor verification
+The following assumptions require mentor confirmation:
+- Solar array derating factor.
+- Typical lunar-night survival heater load.
+- DSN receiver G/T and link assumptions.
+- Minimum Earth elevation margin.
 
-See [`docs/DATA_SOURCES.md`](docs/DATA_SOURCES.md).
-
-## Assumptions and limitations
-- Engineering parameters (panel area, efficiency, radio power, DSN G/T) are **representative estimates**, not a specific lander's specs. See `models/config.py`.
-- Terrain horizons use a 120–240 m/px DEM; near-field boulders and small craters are not resolved.
-- Sites outside the polar DEM use a smooth-sphere horizon (flagged `"terrain": false`).
-- Hourly time steps (10-minute steps for detail views).
-
-## Licence
-MIT
+Mark each confirmed assumption as **mentor-checked** after verification.

@@ -48,3 +48,25 @@ input[type=date].btn { color-scheme: dark; }
 .cmp th, .cmp td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
 .cmp th { font-weight: 600; }
 .cmp td.best { color: var(--good); font-weight: 600; }
+
+/* Explain mode */
+.btn.toggle.on { background: #5ea9ff22; border-color: #5ea9ff; color: #bfe0ff; }
+.callout { display: flex; gap: 10px; align-items: flex-start; background: #5ea9ff12; border: 1px solid #5ea9ff44; border-radius: 10px; padding: 9px 12px; margin: 0 0 10px; }
+.callout p { margin: 0; font-size: 13px; line-height: 1.5; color: #cfe3ff; }
+.callout .ci { flex: none; width: 20px; height: 20px; border-radius: 50%; background: #5ea9ff; color: #07090f; font-weight: 700; font-size: 12px; display: grid; place-items: center; font-family: Georgia, serif; font-style: italic; }
+.intro { border-color: #5ea9ff55; }
+.intro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.intro h3 { margin: 0 0 4px; font-size: 14px; }
+.intro p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+/* Landing strip */
+.landing-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 6px; font-size: 12px; }
+.pill { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pill.good { background: #59d6a422; color: var(--good); } .pill.warn { background: #ffb35c22; color: var(--warn); } .pill.bad { background: #ff6b6b22; color: var(--bad); }
+code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+.top-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+/* Panel height slider + custom point */
+.mast { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 10px; font-size: 13px; }
+.mast input[type=range] { flex: 0 1 220px; accent-color: var(--accent); }
+.btn.small { padding: 3px 8px; font-size: 12px; }
+.busy { color: var(--accent); font-weight: 400; font-size: 13px; }
+.polar { cursor: crosshair; }

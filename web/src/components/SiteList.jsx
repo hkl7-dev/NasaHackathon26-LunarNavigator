@@ -10,7 +10,7 @@ export default function SiteList({ sites, focus, compare, onFocus, onToggle }) {
             <input type="checkbox" checked={compare.includes(s.id)} onClick={(e) => e.stopPropagation()} onChange={() => onToggle(s.id)} />
             <span className="dot" style={{ background: GROUP_COLORS[s.group] || '#ccc' }} />
             <span className="name">{s.name}<small>{s.group} · {s.lat.toFixed(1)}°, {s.lon.toFixed(1)}°</small></span>
-            <span className="pct mono" title="Fraction of time sunlit">☀ {Math.round(s.summary.pct_sunlit * 100)}%</span>
+            <span className="pct mono" title="Fraction of time sunlit">☀ {s.summary ? Math.round(s.summary.pct_sunlit * 100) + '%' : '…'}</span>
           </li>
         ))}
       </ul>

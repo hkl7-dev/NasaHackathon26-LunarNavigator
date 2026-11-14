@@ -9,12 +9,28 @@ function project(lat, lon) {
   return [SIZE / 2 + rho * Math.sin(a), SIZE / 2 - rho * Math.cos(a)]
 }
 
-export default function PolarMap({ sites, focus, onFocus }) {
+function unproject(px, py) {
+  const dx = px - SIZE / 2, dy = SIZE / 2 - py
+  const rho = Math.hypot(dx, dy)
+  const lat = (2 * Math.atan(rho / scale) * 180) / Math.PI - 90
+  const lon = (Math.atan2(dx, dy) * 180) / Math.PI
+  return [lat, lon]
+}
+
+export default function PolarMap({ sites, focus, onFocus, custom, onPick }) {
   const polar = sites.filter((s) => s.lat <= LIMIT + 0.5)
+  const click = (e) => {
+    const svg = e.currentTarget
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse())
+    const [lat, lon] = unproject(p.x, p.y)
+    if (lat <= LIMIT) onPick(lat, lon)
+  }
+  const cp = custom && custom.lat <= LIMIT + 0.5 ? project(custom.lat, custom.lon) : null
   return (
     <div className="card">
-      <div className="card-head"><h2>South pole</h2><span className="muted">to 79°S</span></div>
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="polar">
+      <div className="card-head"><h2>South pole</h2><span className="muted">click anywhere to analyse it</span></div>
+      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="polar" onClick={click}>
         <defs>
           <radialGradient id="moon" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#3a3f4b" /><stop offset="100%" stopColor="#1d2029" />
@@ -40,11 +56,17 @@ export default function PolarMap({ sites, focus, onFocus }) {
         {polar.map((s) => {
           const [x, y] = project(s.lat, s.lon)
           const on = s.id === focus
-          return <g key={s.id} onClick={() => onFocus(s.id)} style={{ cursor: 'pointer' }}>
+          return <g key={s.id} onClick={(e) => { e.stopPropagation(); onFocus(s.id) }} style={{ cursor: 'pointer' }}>
             <circle cx={x} cy={y} r={on ? 8 : 5.5} fill={GROUP_COLORS[s.group] || '#ccc'} stroke={on ? '#fff' : '#0008'} strokeWidth={on ? 2 : 1} />
             <title>{s.name}</title>
           </g>
         })}
+        {cp && <g onClick={(e) => { e.stopPropagation(); onFocus('custom') }} style={{ cursor: 'pointer' }}>
+          <circle cx={cp[0]} cy={cp[1]} r={focus === 'custom' ? 9 : 7} fill="none" stroke="#fff" strokeWidth="2" />
+          <line x1={cp[0] - 12} x2={cp[0] + 12} y1={cp[1]} y2={cp[1]} stroke="#fff" />
+          <line x1={cp[0]} x2={cp[0]} y1={cp[1] - 12} y2={cp[1] + 12} stroke="#fff" />
+          <title>Custom point</title>
+        </g>}
       </svg>
     </div>
   )

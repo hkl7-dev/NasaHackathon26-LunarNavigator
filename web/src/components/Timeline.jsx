@@ -19,7 +19,7 @@ export default function Timeline({ site, i, onSeek }) {
     }
     return rects
   }
-  const line = (arr, scale, y0, h) => arr.slice(start, end).map((v, k) => `${k ? 'L' : 'M'}${xs(start + k)},${y0 + h - (v / scale) * h}`).join(' ')
+  const line = (arr, scale, y0, h) => Array.from(arr.slice(start, end)).map((v, k) => `${k ? 'L' : 'M'}${xs(start + k)},${y0 + h - (v / scale) * h}`).join(' ')
 
   const click = (e) => {
     const r = e.currentTarget.getBoundingClientRect()

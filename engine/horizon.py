@@ -5,7 +5,7 @@ import numpy as np
 
 R = 1737400.0                      # LOLA reference sphere radius, m
 AZ = np.arange(0, 360, 0.5)        # 720 directions, 0 = north, 90 = east
-D = np.geomspace(250, 250_000, 1500)  # sample distances, m
+D = np.geomspace(720, 250_000, 1500)  # sample distances, m (start 3 px out: nearer is below DEM resolution)
 
 DEM_PATH = "dem/LDEM_75S_240M.LBL"   # <-- set to the file you downloaded (.LBL, .IMG or .tif)
 DEM_SCALE = 0.5                      # <-- SCALING_FACTOR from the .LBL (1.0 for most GeoTIFFs)
@@ -31,7 +31,8 @@ class DEM:
         lat, lon = np.asarray(lat, float), np.asarray(lon, float)
         x, y = self._to_xy.transform(lon, lat)
         col, row = self._inv * (np.asarray(x), np.asarray(y))
-        return map_coordinates(self.h, [np.ravel(row), np.ravel(col)], order=1, mode="nearest").reshape(lat.shape)
+        # rasterio gives pixel-corner coordinates; map_coordinates expects pixel centres, hence -0.5
+        return map_coordinates(self.h, [np.ravel(row) - 0.5, np.ravel(col) - 0.5], order=1, mode="nearest").reshape(lat.shape)
 
     def covers(self, lat):
         return lat < -75.0  # adjust to your DEM's coverage
@@ -65,6 +66,8 @@ def flat_mask():
 def plot_mask(mask, title, path):
     import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(9, 3))
-    plt.fill_between(AZ, -1, mask, color="#555")
+    base = min(-1.0, float(np.min(mask)) - 0.5)
+    plt.fill_between(AZ, base, mask, color="#555")
+    plt.axhline(0, color="#c00", lw=0.6, ls="--")
     plt.xlim(0, 360); plt.xlabel("azimuth (deg, 0 = N, 90 = E)"); plt.ylabel("horizon el (deg)")
     plt.title(title); plt.tight_layout(); plt.savefig(path, dpi=150); plt.close(fig)

@@ -1,6 +1,6 @@
 import { windowState, fmtDuration } from '../lib.js'
 
-export default function Metrics({ site, i }) {
+export default function Metrics({ site, i, temps }) {
   const sun = windowState(site.sun_windows, i, site.step_min, site.n)
   const earth = windowState(site.earth_windows, i, site.step_min, site.n)
   const s = site.summary
@@ -11,6 +11,7 @@ export default function Metrics({ site, i }) {
     { k: 'Solar power', v: `${Math.round(p)} W`, sub: (site.panel_mode || '').replace('_', ' ') + ' panel', tone: p > 50 ? 'good' : 'bad' },
     { k: 'Battery', v: `${Math.round(soc * 100)}%`, sub: s.survives_default ? (site.design ? 'Survives with your pack' : 'Survives with default pack') : (site.design ? 'Your pack runs flat' : 'Default pack runs flat'), tone: soc > 0.3 ? 'good' : 'bad' },
     { k: 'Comms to Earth', v: rate > 0 ? (rate >= 1000 ? `${(rate / 1000).toFixed(1)} Mbps` : `${Math.round(rate)} kbps`) : 'No link', sub: 'direct-to-Earth', tone: rate > 0 ? 'good' : 'bad' },
+    ...(temps ? [{ k: 'Ground temperature', v: `${Math.round(temps.T[i])} K`, sub: `${Math.round(temps.T[i] - 273.15)} °C · ${Math.round(temps.min)} to ${Math.round(temps.max)} K over 3 yr`, tone: temps.T[i] < 110 ? 'warn' : 'good' }] : []),
     { k: 'Longest night', v: fmtDuration(s.longest_dark_h), sub: `≈ ${s.battery_mass_kg} kg battery to survive`, tone: s.longest_dark_h < 150 ? 'good' : 'warn' },
   ]
   return (

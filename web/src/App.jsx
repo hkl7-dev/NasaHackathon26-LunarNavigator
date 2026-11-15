@@ -13,6 +13,12 @@ import DesignPanel from './components/DesignPanel.jsx'
 import Tour from './components/Tour.jsx'
 import DataPanel from './components/DataPanel.jsx'
 import logo from './assets/moonle-logo.png'
+import Thermal from './components/Thermal.jsx'
+import LandingSafety from './components/LandingSafety.jsx'
+import RightNow, { nowIndex } from './components/RightNow.jsx'
+import Exports from './components/Exports.jsx'
+import PngButton from './components/PngButton.jsx'
+import { surfaceTemps } from './thermal.js'
 import { DEFAULT_DESIGN, PRESETS, applyDesign, isDefault, designKey } from './design.js'
 
 const SPEEDS = [1, 6, 24]  // hours advanced per animation tick
@@ -98,6 +104,7 @@ export default function App() {
 
   const baseSite = override && override.id === focus && override.mast === mast ? override.data : focus ? cache[focus] : null
   const site = useMemo(() => applyDesign(baseSite, design), [baseSite, design])
+  const temps = useMemo(() => (baseSite ? surfaceTemps(baseSite) : null), [baseSite])
   const designedCache = useMemo(() => Object.fromEntries(Object.entries(cache).map(([k, d]) => [k, applyDesign(d, design)])), [cache, design])
   const n = site?.n ?? 1
   const stepMin = site?.step_min ?? 60
@@ -152,6 +159,12 @@ export default function App() {
     design: (id) => setDesign(id ? PRESETS.find((p) => p.id === id).d : DEFAULT_DESIGN),
   }
 
+  const goNow = () => { const k = site && nowIndex(site.t0, stepMin, n); if (k != null) { setPlaying(false); setI(k) } }
+  const openNow = (id) => {
+    setFocus(id); setPlaying(false)
+    loadVectors().then((v) => { const k = nowIndex(v.t0, v.step_min, v.n); if (k != null) setI(k) })
+  }
+
   const listed = custom ? [{ ...custom, summary: cache.custom?.summary }, ...sites] : sites
   const polarSite = site && demCovers(site.site.lat)
 
@@ -189,6 +202,7 @@ export default function App() {
             <select className="btn" value={speed} onChange={(e) => setSpeed(+e.target.value)} title="Playback speed">
               {SPEEDS.map((s) => <option key={s} value={s}>{s} h / tick</option>)}
             </select>
+            <button className="btn" onClick={goNow} title="Jump to the current real-world time">● Now</button>
             <input type="date" className="btn" onChange={onDate}
               value={site ? timeAt(site, i).toISOString().slice(0, 10) : ''} />
             <input className="slider" type="range" min={0} max={n - 1} value={i} onChange={(e) => setI(+e.target.value)} />
@@ -199,7 +213,7 @@ export default function App() {
               <section className="card" id="sec-dome">
                 <div className="card-head">
                   <h2>{site.site.name}{busy && <span className="busy"> · computing…</span>}</h2>
-                  <span className="muted mono">{site.site.lat.toFixed(2)}°, {site.site.lon.toFixed(2)}°E · {site.site.terrain ? 'LOLA terrain horizon' : 'smooth horizon (outside polar DEM)'}</span>
+                  <span className="muted mono">{site.site.lat.toFixed(2)}°, {site.site.lon.toFixed(2)}°E · {site.site.terrain ? 'LOLA terrain horizon' : 'smooth horizon (outside polar DEM)'} · <PngButton name={`${site.site.name} sky`} /></span>
                 </div>
                 {polarSite && (
                   <div className="mast">
@@ -214,24 +228,28 @@ export default function App() {
                 <SkyDome site={site} i={i} />
               </section>
               <Callout on={explain} k="metrics" />
-              <Metrics site={site} i={i} />
+              <Metrics site={site} i={i} temps={temps} />
               <Callout on={explain} k="design" />
               <div id="sec-design"><DesignPanel design={design} onChange={setDesign} site={site} /></div>
               <section className="card">
-                <div className="card-head"><h2>Next 30 days</h2><span className="muted">click to jump</span></div>
+                <div className="card-head"><h2>Next 30 days</h2><span className="muted">click to jump · <PngButton name={`${site.site.name} next 30 days`} /></span></div>
                 <Callout on={explain} k="timeline" />
                 <Timeline site={site} i={i} onSeek={setI} />
               </section>
               <section className="card" id="sec-landing">
-                <div className="card-head"><h2>When should we land?</h2><span className="muted">{design.mission_days}-day mission from each possible landing day · hover for details, click to jump</span></div>
+                <div className="card-head"><h2>When should we land?</h2><span className="muted">{design.mission_days}-day mission from each possible landing day · hover for details, click to jump · <PngButton name={`${site.site.name} landing dates`} /></span></div>
                 <Callout on={explain} k="landing" />
                 <LandingAnalysis site={site} i={i} onSeek={setI} compare={compare} cacheSites={designedCache} />
               </section>
+              <LandingSafety site={site} i={i} temps={temps} />
+              <Thermal site={site} i={i} temps={temps} />
+              <Exports site={site} temps={temps} i={i} />
             </>
           ) : !error && <div className="card muted">{focus === 'custom' ? 'Analysing this point…' : 'Loading…'}</div>}
 
           {explain && compare.length > 1 && <Callout on k="compare" />}
           <div id="sec-compare"><Compare ids={compare} cache={designedCache} i={i} /></div>
+          <RightNow sites={sites} onGo={openNow} />
           <DataPanel site={site} onPick={onPick} />
           {tour != null && <Tour step={tour} setStep={setTour} api={tourApi} />}
         </main>

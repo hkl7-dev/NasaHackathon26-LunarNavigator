@@ -48,7 +48,7 @@ function sampleGrid(dem, x, y) {
   return (h[i] * (1 - fc) + h[i + 1] * fc) * (1 - fr) + (h[i + n] * (1 - fc) + h[i + n + 1] * fc) * fr
 }
 
-function sampleDem(dem, lat, lon) {
+export function sampleDem(dem, lat, lon) {
   // polar stereographic as in the LOLA products: south has 0°E up, north has 0°E down
   const sg = dem.s ?? -1
   const rho = 2 * R * Math.tan(Math.PI / 4 - (sg * lat * D2R) / 2)

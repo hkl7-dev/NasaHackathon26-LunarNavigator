@@ -165,7 +165,22 @@ const SOURCES = [
   ['LOLA permanently shadowed regions', 'LPSR_65*_240M', '240 m', 'Validation + ice evidence', 'https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/', 'lola_psr'],
   ['LOLA slope', 'LDSM_75S/75N_240M', '240 m', 'Validation of our slope', 'https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/', 'lola_slope'],
   ['Diviner max temperature', 'LRO Diviner Polar Resource Product', 'mesh, to 80°', 'Cold traps < 110 K, ice evidence', 'https://pds-geosciences.wustl.edu/lro/lro-l-dlre-4-rdr-v1/lrodlr_1001/data/prp/', 'diviner_tmax'],
+  ['Regolith thermal properties', 'Hayne et al. 2017, from LRO Diviner', 'global', 'Surface temperature model (albedo, emissivity, heat flow)', 'https://doi.org/10.1002/2017JE005387', null],
   ['Artemis III candidate regions', 'NASA, Oct 2024 (9 regions)', '≈15 km regions', 'Scored and ranked with our model', 'https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/', null],
+]
+
+const REFERENCES = [
+  ['Smith, D. E. et al. (2010). The Lunar Orbiter Laser Altimeter investigation on the Lunar Reconnaissance Orbiter mission. Space Science Reviews 150, 209–241.', 'https://doi.org/10.1007/s11214-009-9512-y'],
+  ['Mazarico, E., Neumann, G. A., Smith, D. E., Zuber, M. T., Torrence, M. H. (2011). Illumination conditions of the lunar polar regions using LOLA topography. Icarus 211, 1066–1081.', 'https://doi.org/10.1016/j.icarus.2010.10.030'],
+  ['Paige, D. A. et al. (2010). Diviner Lunar Radiometer observations of cold traps in the Moon\'s south polar region. Science 330, 479–482.', 'https://doi.org/10.1126/science.1187726'],
+  ['Hayne, P. O. et al. (2017). Global regolith thermophysical properties of the Moon from the Diviner Lunar Radiometer Experiment. JGR Planets 122, 2371–2400.', 'https://doi.org/10.1002/2017JE005387'],
+  ['Vasavada, A. R., Paige, D. A., Wood, S. E. (1999). Near-surface temperatures on Mercury and the Moon and the stability of polar ice deposits. Icarus 141, 179–193.', 'https://doi.org/10.1006/icar.1999.6175'],
+  ['Li, S. et al. (2018). Direct evidence of surface exposed water ice in the lunar polar regions. PNAS 115, 8907–8912.', 'https://doi.org/10.1073/pnas.1802345115'],
+  ['Folkner, W. M., Williams, J. G., Boggs, D. H. (2009). The Planetary and Lunar Ephemeris DE 421. IPN Progress Report 42-178.', 'https://ipnpr.jpl.nasa.gov/progress_report/42-178/178C.pdf'],
+  ['Acton, C. H. (1996). Ancillary data services of NASA\'s Navigation and Ancillary Information Facility. Planetary and Space Science 44, 65–70.', 'https://doi.org/10.1016/0032-0633(95)00107-7'],
+  ['Rhodes, B. (2019). Skyfield: High precision research-grade positions for planets and Earth satellites generator. Astrophysics Source Code Library, ascl:1907.024.', 'https://rhodesmill.org/skyfield/'],
+  ['NASA (2024). NASA provides update on Artemis III Moon landing regions. News release, 28 October 2024.', 'https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/'],
+  ['USGS / IAU Gazetteer of Planetary Nomenclature (feature positions used to place the regions).', 'https://planetarynames.wr.usgs.gov/'],
 ]
 
 function Sources({ refs, heat, pole, regions, site }) {
@@ -204,6 +219,8 @@ function Sources({ refs, heat, pole, regions, site }) {
           </tbody>
         </table>
       </div>
+      <h3 className="refs-head">References</h3>
+      <ol className="refs">{REFERENCES.map(([cite, url]) => <li key={cite}>{cite} {url && <a href={url} target="_blank" rel="noreferrer">{url.replace('https://', '')}</a>}</li>)}</ol>
       <div className="downloads">
         <span className="muted">Download our processed data:</span>
         <button className="btn small" disabled={!heat || heat.partial} onClick={csv}>Map layers, {pole} pole (CSV)</button>

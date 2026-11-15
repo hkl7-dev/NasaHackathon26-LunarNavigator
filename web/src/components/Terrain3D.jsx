@@ -84,7 +84,7 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
     const el = box.current
     let renderer
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true })   // keeps the frame readable for PNG export
     } catch (e) { onFail?.('WebGL is not available in this browser'); return }
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
     renderer.shadowMap.enabled = true

@@ -4,6 +4,7 @@ import { loadDem, loadVectors } from './engine.js'
 
 export const LAYERS = {
   score: { label: 'Landing score', unit: 'landing score: flat ground + Sun + Earth + short nights', fmt: (v) => `${Math.round(v * 100)}/100`, ramp: [[0, [200, 40, 40]], [0.35, [235, 120, 40]], [0.6, [235, 210, 60]], [1, [40, 200, 90]]], range: [0, 0.8] },
+  ice: { label: 'Water ice', unit: 'never sunlit = cold trap where water ice can survive', fmt: (v) => (v <= 0 ? 'never sunlit' : `${(v * 100).toFixed(v < 0.1 ? 1 : 0)}% sunlit`), ramp: [[0, [215, 245, 255]], [0.02, [90, 170, 235]], [0.25, [40, 60, 95]], [1, [34, 32, 32]]], range: [0, 0.3] },
   sun: { label: 'Sunlight', unit: '% of time sunlit', fmt: (v) => `${Math.round(v * 100)}%`, ramp: [[0, [12, 12, 22]], [0.25, [90, 30, 70]], [0.5, [200, 70, 40]], [0.75, [250, 170, 40]], [1, [255, 245, 190]]], range: [0, 0.9] },
   earth: { label: 'Earth in view', unit: '% of time Earth visible', fmt: (v) => `${Math.round(v * 100)}%`, ramp: [[0, [10, 12, 24]], [0.5, [30, 90, 170]], [1, [170, 225, 255]]], range: [0, 1] },
   both: { label: 'Sun + Earth', unit: '% of time with both', fmt: (v) => `${Math.round(v * 100)}%`, ramp: [[0, [10, 14, 18]], [0.5, [30, 130, 100]], [1, [170, 255, 210]]], range: [0, 0.6] },
@@ -43,30 +44,37 @@ export function renderLayer(heat, layer) {
   return cv.toDataURL()
 }
 
-const memo = {}
-// Starts the worker on first use; returns {heat, progress, error}
-export function useHeatmap(enabled, { cells = 84, mapLimit = -79 } = {}) {
-  const [state, setState] = useState(memo.result ? { heat: memo.result, progress: 1 } : { heat: null, progress: 0 })
-  const started = useRef(false)
+const memo = {}   // finished maps, per pole
+const jobs = {}   // latest state of each pole's running job
+// Starts the worker on first use for each pole; returns {heat, progress, error}
+export function useHeatmap(enabled, { cells = 84, mapLimit = -79, pole = 'south' } = {}) {
+  const idle = { heat: null, progress: 0 }
+  const [state, setState] = useState(() => memo[pole] ? { heat: memo[pole], progress: 1 } : jobs[pole] || idle)
+  const cur = useRef(pole)
+  cur.current = pole
   useEffect(() => {
-    if (!enabled || started.current || memo.result) return
-    started.current = true
-    let worker
-    Promise.all([loadDem(), loadVectors()]).then(([dem, vec]) => {
-      worker = new Worker(new URL('./heatmap.worker.js', import.meta.url), { type: 'module' })
+    setState(memo[pole] ? { heat: memo[pole], progress: 1 } : jobs[pole] || idle)
+    if (!enabled || jobs[pole] || memo[pole]) return
+    const put = (st) => { jobs[pole] = st; if (cur.current === pole) setState(st) }
+    put(idle)
+    Promise.all([loadDem(pole), loadVectors()]).then(([dem, vec]) => {
+      const worker = new Worker(new URL('./heatmap.worker.js', import.meta.url), { type: 'module' })
       worker.onmessage = (e) => {
         const m = e.data
-        if (m.type === 'progress') setState({ heat: { N: cells, ...m, partial: true }, progress: m.done })
+        if (m.type === 'progress') put({ heat: { N: cells, ...m, ice: m.sun, partial: true }, progress: m.done })
         else {
-          memo.result = { ...m, partial: false }
-          setState({ heat: memo.result, progress: 1 })
+          memo[pole] = { ...m, ice: m.sun, partial: false }
+          put({ heat: memo[pole], progress: 1 })
           worker.terminate()
-          console.info(`[heatmap] ${cells}x${cells} cells in ${m.ms} ms`)
+          console.info(`[heatmap] ${pole} ${cells}x${cells} cells in ${m.ms} ms`)
         }
       }
-      worker.onerror = (e) => setState((s) => ({ ...s, error: e.message || 'map worker failed' }))
+      worker.onerror = (e) => put({ ...jobs[pole], error: e.message || 'map worker failed' })
       worker.postMessage({ dem, vec, cells, mapLimit })
-    }).catch((e) => setState((s) => ({ ...s, error: e.message })))
-  }, [enabled])
+    }).catch((e) => {
+      put({ ...idle, error: pole === 'north' ? 'North pole terrain not found: put LDEM_75N_240M.IMG and .LBL in dem/ and run python -m engine.export_north' : e.message })
+      delete jobs[pole]   // allow a retry later
+    })
+  }, [enabled, pole])
   return state
 }

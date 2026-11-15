@@ -13,9 +13,10 @@ const R = 1737400, D2R = Math.PI / 180, R2D = 180 / Math.PI
 const RINGS = 300, SECTORS = 720, RING_POW = 1.6   // rings get denser towards the pole, where the sites are
 
 // ---- map projection (metres), same as heatmap.worker.js / engine.js ----
-export const rhoOf = (lat) => 2 * R * Math.tan(Math.PI / 4 + (lat * D2R) / 2)
-export function toMap(lat, lon) { const r = rhoOf(lat); return [r * Math.sin(lon * D2R), r * Math.cos(lon * D2R)] }
-export function fromMap(x, y) { return [(2 * Math.atan(Math.hypot(x, y) / (2 * R)) - Math.PI / 2) * R2D, Math.atan2(x, y) * R2D] }
+// sg = -1 for the south pole (0°E up), +1 for the north pole (0°E down), as in the LOLA polar products
+export const rhoOf = (lat, sg = -1) => 2 * R * Math.tan(Math.PI / 4 - (sg * lat * D2R) / 2)
+export function toMap(lat, lon, sg = -1) { const r = rhoOf(lat, sg); return [r * Math.sin(lon * D2R), -sg * r * Math.cos(lon * D2R)] }
+export function fromMap(x, y, sg = -1) { return [sg * (90 - 2 * Math.atan(Math.hypot(x, y) / (2 * R)) * R2D), Math.atan2(x, -sg * y) * R2D] }
 
 function sampleGrid(g, x, y) {
   const c = (x - g.x0) / g.pixel_m - 0.5, r = (g.y0 - y) / g.pixel_m - 0.5, n = g.size
@@ -30,8 +31,8 @@ function makeSampler({ fine, coarse }) {
   return (x, y) => (x > fx0 && x < fx1 && y < fy0 && y > fy1 ? sampleGrid(fine, x, y) : sampleGrid(coarse, x, y))
 }
 
-// Moon-fixed (km) -> scene axes: X = map x, Y = up at the south pole, Z = -map y
-const mfToScene = (x, y, z) => new THREE.Vector3(y, -z, -x)
+// Moon-fixed (km) -> scene axes: X = map x, Y = up at the pole, Z = -map y
+const mfToScene = (x, y, z, sg) => new THREE.Vector3(y, sg * z, sg * x)
 
 function dotTexture(color, ring = false) {
   const s = 64, cv = document.createElement('canvas'); cv.width = cv.height = s
@@ -67,14 +68,16 @@ function heatTexture(heat, layer) {
   return t
 }
 
-export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHover, heat, layer, time, limit, expanded, onFail }) {
+export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHover, heat, layer, time, limit, pole = 'south', expanded, onFail }) {
   const box = useRef(null)
   const W = useRef({})          // three.js world, kept out of React state
   const [ready, setReady] = useState(false)
   const [exag, setExag] = useState(4)
   const [realSun, setRealSun] = useState(true)
   const [sunInfo, setSunInfo] = useState(null)
-  const rhoMax = rhoOf(limit)
+  const sg = pole === 'north' ? 1 : -1
+  const rhoMax = rhoOf(limit, sg)
+  const inside = (lat, pad = 0) => sg * lat >= sg * limit - pad
 
   // ---------- one-time scene setup ----------
   useEffect(() => {
@@ -169,7 +172,8 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
       w.tween = { t0: performance.now(), ms: 2200, cam: [camera.position.clone(), new THREE.Vector3(0, 400, 540)], tgt: [controls.target.clone(), new THREE.Vector3(0, -8, 0)] }
     }
 
-    loadDem().then((dem) => {
+    w.sg = sg
+    loadDem(pole).then((dem) => {
       if (!w.renderer) return
       w.sample = makeSampler(dem)
       buildTerrain(w, rhoMax)
@@ -235,10 +239,10 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
         w.labels.push({ pos: top, el })
       }
       sites.forEach((s) => add(s.id, s.name, s.lat, s.lon, GROUP_COLORS[s.group] || '#ccc', false))
-      if (custom && custom.lat <= limit + 0.5) add('custom', 'Custom point', custom.lat, custom.lon, '#fff', true)
+      if (custom && inside(custom.lat, 0.5)) add('custom', 'Custom point', custom.lat, custom.lon, '#fff', true)
       for (const [lon, t] of [[0, '0°'], [90, '90°E'], [180, '180°'], [-90, '90°W']]) {
         const el = document.createElement('div'); el.className = 't3d-label axis-label'; el.textContent = t
-        layerEl.appendChild(el); w.labels.push({ pos: surfacePoint(w, limit + 0.25, lon).add(new THREE.Vector3(0, 3, 0)), el })
+        layerEl.appendChild(el); w.labels.push({ pos: surfacePoint(w, limit - sg * 0.25, lon).add(new THREE.Vector3(0, 3, 0)), el })
       }
       w.dirty = 2
     }
@@ -252,7 +256,7 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
     if (!ready || !focus) return
     if (firstFocus.current) { firstFocus.current = false; return }   // keep the intro fly-in
     const meta = focus === 'custom' ? custom : sites.find((s) => s.id === focus)
-    if (!meta || meta.lat > limit + 0.5) return
+    if (!meta || !inside(meta.lat, 0.5)) return
     const p = surfacePoint(w, meta.lat, meta.lon)
     const off = new THREE.Vector3().subVectors(p, w.controls.target)
     w.tween = { t0: performance.now(), ms: 900, cam: [w.camera.position.clone(), w.camera.position.clone().add(off)], tgt: [w.controls.target.clone(), p] }
@@ -267,8 +271,8 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
       if (!alive || !w.renderer) return
       w.updateSun = () => {
         const k = Math.max(0, Math.min(vec.n - 1, Math.round(((time ?? Date.parse(vec.t0)) - Date.parse(vec.t0)) / (vec.step_min * 60000))))
-        const s = mfToScene(vec.sun.x[k], vec.sun.y[k], vec.sun.z[k]).normalize()
-        const e = mfToScene(vec.earth.x[k], vec.earth.y[k], vec.earth.z[k]).normalize()
+        const s = mfToScene(vec.sun.x[k], vec.sun.y[k], vec.sun.z[k], sg).normalize()
+        const e = mfToScene(vec.earth.x[k], vec.earth.y[k], vec.earth.z[k], sg).normalize()
         const elS = Math.asin(s.y) * R2D, elE = Math.asin(e.y) * R2D
         setSunInfo({ sun: elS, earth: elE })
         // terrain is stretched vertically by `exag`, so stretch the light's slope the same way:
@@ -307,7 +311,7 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
       if (m) return { marker: m.object.userData.id }
       const t = ray.intersectObject(w.terrain, false)[0]
       if (!t) return null
-      const [lat, lon] = fromMap(t.point.x * 1000, -t.point.z * 1000)
+      const [lat, lon] = fromMap(t.point.x * 1000, -t.point.z * 1000, sg)
       return { lat, lon }
     }
     const onDown = (e) => { down = [e.clientX, e.clientY] }
@@ -317,7 +321,7 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
       const p = pick(e)
       if (!p) return
       if (p.marker) onFocus(p.marker)
-      else if (p.lat <= limit) onPick(p.lat, p.lon)
+      else if (inside(p.lat)) onPick(p.lat, p.lon)
     }
     const onMove = (e) => {
       if (e.buttons) return
@@ -434,7 +438,7 @@ function setHeights(w, exag) {
 
 function heightAt(w, x, y) { return (w.sample(x, y) * w.exag - (x * x + y * y) / (2 * R)) / 1000 }
 function surfacePoint(w, lat, lon) {
-  const [x, y] = toMap(lat, lon)
+  const [x, y] = toMap(lat, lon, w.sg)
   return new THREE.Vector3(x / 1000, heightAt(w, x, y), -y / 1000)
 }
 
@@ -444,8 +448,8 @@ function buildGrid(w, rhoMax, limit) {
   const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.16, depthWrite: false })
   const lift = 0.15 + 0.05 * w.exag
   const pt = (x, y) => new THREE.Vector3(x / 1000, heightAt(w, x, y) + lift, -y / 1000)
-  for (const lat of [-80, -85, -88]) {
-    const r = rhoOf(lat), pts = []
+  for (const lat of [80, 85, 88]) {
+    const r = rhoOf(w.sg * lat, w.sg), pts = []
     for (let a = 0; a <= 360; a += 1) pts.push(pt(r * Math.sin(a * D2R), r * Math.cos(a * D2R)))
     g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat))
   }

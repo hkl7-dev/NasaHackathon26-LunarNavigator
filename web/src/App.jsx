@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { fetchJSON, timeAt, fmtDate } from './lib.js'
-import { loadDem, loadVectors, computeSite, landingScan, demCovers } from './engine.js'
+import { loadDem, loadVectors, computeSite, landingScan, demCovers, poleOf } from './engine.js'
 import PolarMap from './components/PolarMap.jsx'
 import SiteList from './components/SiteList.jsx'
 import SkyDome from './components/SkyDome.jsx'
@@ -30,7 +30,8 @@ function parseDesign(str) {
 }
 
 async function analyse(meta, mast) {
-  const [vec, dem] = await Promise.all([loadVectors(), loadDem()])
+  // no terrain file for this pole yet -> smooth-horizon analysis instead of an error
+  const [vec, dem] = await Promise.all([loadVectors(), demCovers(meta.lat) ? loadDem(poleOf(meta.lat)).catch(() => null) : null])
   const d = computeSite(meta, vec, dem, mast)
   d.landing = landingScan(d)
   return d

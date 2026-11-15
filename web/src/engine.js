@@ -14,25 +14,30 @@ export const CFG = {
   comms: { freq_hz: 8.45e9, tx_power_w: 15, tx_gain_dbi: 20, tx_losses_db: 2, rx_g_over_t_dbk: 53, required_ebn0_db: 2.5, margin_db: 3, min_elev_margin_deg: 1, max_rate_bps: 2e6 },
 }
 
-let demP, vecP
+let vecP
+const demP = {}
 function loadGrid(name) {
   return Promise.all([
     fetch(`${DATA}/${name}.json`).then((r) => { if (!r.ok) throw new Error(`${name}.json missing: run python -m engine.export_web`); return r.json() }),
     fetch(`${DATA}/${name}.bin`).then((r) => { if (!r.ok) throw new Error(`${name}.bin missing`); return r.arrayBuffer() }),
   ]).then(([m, buf]) => ({ ...m, h: new Int16Array(buf) }))
 }
-// coarse 960 m grid to 75S + full 240 m core around the pole
-export function loadDem() {
-  demP ??= Promise.all([loadGrid('dem_south_960m'), loadGrid('dem_south_240m_core')]).then(([coarse, fine]) => ({ coarse, fine }))
-  return demP
+// coarse 960 m grid to 75° + full 240 m core around the pole. pole = 'south' | 'north'
+// (the north files come from `python -m engine.export_north`)
+export function loadDem(pole = 'south') {
+  demP[pole] ??= Promise.all([loadGrid(`dem_${pole}_960m`), loadGrid(`dem_${pole}_240m_core`)])
+    .then(([coarse, fine]) => ({ coarse, fine, pole, s: pole === 'north' ? 1 : -1 }))
+  demP[pole].catch(() => { delete demP[pole] })
+  return demP[pole]
 }
+export const poleOf = (lat) => (lat > 0 ? 'north' : 'south')
 export function loadVectors() {
   vecP ??= fetch(`${DATA}/vectors.json`).then((r) => { if (!r.ok) throw new Error('vectors.json missing: run python -m engine.export_web'); return r.json() })
   return vecP
 }
 
 // ---------- terrain ----------
-export function demCovers(lat) { return lat < -75.2 }
+export function demCovers(lat) { return Math.abs(lat) > 75.2 }
 
 function sampleGrid(dem, x, y) {
   const c = (x - dem.x0) / dem.pixel_m - 0.5, r = (dem.y0 - y) / dem.pixel_m - 0.5
@@ -44,8 +49,10 @@ function sampleGrid(dem, x, y) {
 }
 
 function sampleDem(dem, lat, lon) {
-  const rho = 2 * R * Math.tan(Math.PI / 4 + (lat * D2R) / 2)
-  const x = rho * Math.sin(lon * D2R), y = rho * Math.cos(lon * D2R)
+  // polar stereographic as in the LOLA products: south has 0°E up, north has 0°E down
+  const sg = dem.s ?? -1
+  const rho = 2 * R * Math.tan(Math.PI / 4 - (sg * lat * D2R) / 2)
+  const x = rho * Math.sin(lon * D2R), y = -sg * rho * Math.cos(lon * D2R)
   const f = dem.fine, edge = f.size * f.pixel_m
   if (x > f.x0 + f.pixel_m && x < f.x0 + edge - f.pixel_m && y < f.y0 - f.pixel_m && y > f.y0 - edge + f.pixel_m) return sampleGrid(f, x, y)
   return sampleGrid(dem.coarse, x, y)
@@ -96,7 +103,7 @@ function windows(flag, stepMin) {
 // ---------- full analysis for one point ----------
 export function computeSite(meta, vec, dem, hExtra = 2) {
   const { lat, lon } = meta
-  const terrain = !!dem && demCovers(lat)
+  const terrain = !!dem && demCovers(lat) && (dem.s ?? -1) === Math.sign(lat)
   let mask = new Float32Array(NAZ), elev = 0
   if (terrain) ({ mask, h0: elev } = horizonMask(dem, lat, lon, hExtra))
   const n = vec.n, step = vec.step_min

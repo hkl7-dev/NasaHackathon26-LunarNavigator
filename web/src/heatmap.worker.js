@@ -56,7 +56,8 @@ self.onmessage = (ev) => {
   const sun = new Float32Array(N * N).fill(NaN), earth = new Float32Array(N * N).fill(NaN)
   const both = new Float32Array(N * N).fill(NaN), night = new Float32Array(N * N).fill(NaN)
   const slope = new Float32Array(N * N).fill(NaN), score = new Float32Array(N * N).fill(NaN)
-  const rhoMax = 2 * R * Math.tan(((90 + mapLimit) * D2R) / 2)  // stereographic radius of the map edge, metres
+  const sg = dem.s ?? -1   // -1 south pole, +1 north pole
+  const rhoMax = 2 * R * Math.tan(((90 - sg * mapLimit) * D2R) / 2)  // stereographic radius of the map edge, metres
   const cellM = (2 * rhoMax) / N   // cell size in map metres
   const mask = new Float32Array(NAZ)
   const t0 = performance.now()
@@ -65,14 +66,15 @@ self.onmessage = (ev) => {
     for (let c = 0; c < N; c++) {
       const u = ((c + 0.5) / N) * 2 - 1, v = 1 - ((r + 0.5) / N) * 2
       if (u * u + v * v > 1) continue
-      const x = u * rhoMax, y = v * rhoMax              // map: 0°E up, 90°E right (same as PolarMap)
+      const x = u * rhoMax, y = v * rhoMax              // map: 90°E right; 0°E up (south) or down (north), as PolarMap
       const rho = Math.hypot(x, y)
-      const lon = Math.atan2(x, y)
-      const lat = 2 * Math.atan(rho / (2 * R)) - Math.PI / 2
-      const kScale = 1 / Math.cos((Math.PI / 2 + lat) / 2) ** 2   // stereographic scale factor
+      const lon = Math.atan2(x, -sg * y)
+      const colat = 2 * Math.atan(rho / (2 * R))
+      const lat = sg * (Math.PI / 2 - colat)
+      const kScale = 1 / Math.cos(colat / 2) ** 2   // stereographic scale factor
       const h0 = sample(x, y) + mast
-      // north (away from the pole) and east unit vectors in the map plane
-      const nx = Math.sin(lon), ny = Math.cos(lon), ex = Math.cos(lon), ey = -Math.sin(lon)
+      // geographic north and east unit vectors in the map plane
+      const nx = -sg * Math.sin(lon), ny = Math.cos(lon), ex = Math.cos(lon), ey = sg * Math.sin(lon)
 
       // coarse horizon mask
       for (let a = 0; a < NAZ; a++) {

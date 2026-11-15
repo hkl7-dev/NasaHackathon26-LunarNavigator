@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { GROUP_COLORS } from '../lib.js'
 import { LAYERS, useHeatmap, renderLayer, gradientCss } from '../heatmap.js'
 
@@ -19,17 +19,51 @@ function unproject(px, py) {
   return [lat, lon]
 }
 
+const Terrain3D = lazy(() => import('./Terrain3D.jsx'))
+
+function hasWebGL() {
+  try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')) } catch { return false }
+}
+function savedView() {
+  try { const v = localStorage.getItem('mapView'); if (v === '2d' || v === '3d') return v } catch { /* storage blocked */ }
+  return hasWebGL() ? '3d' : '2d'
+}
+
+// layer value at a lat/lon (same grid as the worker: map-normalised u, v in [-1, 1])
+function valueAt(heat, layer, lat, lon) {
+  const rho = Math.tan(((90 + lat) * Math.PI) / 360) / Math.tan(((90 + LIMIT) * Math.PI) / 360)
+  const a = (lon * Math.PI) / 180, u = rho * Math.sin(a), v = rho * Math.cos(a)
+  if (u * u + v * v > 1) return NaN
+  const N = heat.N, c = Math.min(N - 1, Math.floor(((u + 1) / 2) * N)), r = Math.min(N - 1, Math.floor(((1 - v) / 2) * N))
+  return heat[layer][r * N + c]
+}
+
 function toSvg(e) {
   const svg = e.currentTarget
   const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY
   return pt.matrixTransform(svg.getScreenCTM().inverse())
 }
 
-export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer = 'none', onLayer }) {
-  const polar = sites.filter((s) => s.lat <= LIMIT + 0.5)
+export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer = 'none', onLayer, time }) {
+  const polar = useMemo(() => sites.filter((s) => s.lat <= LIMIT + 0.5), [sites])
   const { heat, progress, error } = useHeatmap(layer !== 'none', { mapLimit: LIMIT })
-  const img = useMemo(() => (heat && layer !== 'none' ? renderLayer(heat, layer) : null), [heat, layer])
+  const [view, setViewRaw] = useState(savedView)
+  const [fail3d, setFail3d] = useState(null)
+  const [big, setBig] = useState(false)
+  const is3d = view === '3d' && !fail3d
+  const img = useMemo(() => (heat && layer !== 'none' && !is3d ? renderLayer(heat, layer) : null), [heat, layer, is3d])
   const [hover, setHover] = useState(null)
+  const setView = (v) => { setViewRaw(v); try { localStorage.setItem('mapView', v) } catch { /* ignore */ } }
+  useEffect(() => {
+    if (!big) return
+    const k = (e) => e.key === 'Escape' && setBig(false)
+    addEventListener('keydown', k); return () => removeEventListener('keydown', k)
+  }, [big])
+  const hover3d = useCallback((p) => {
+    if (!p || !heat || layer === 'none') return setHover(null)
+    const val = valueAt(heat, layer, p.lat, p.lon)
+    setHover(Number.isNaN(val) ? null : { val, lat: p.lat, lon: p.lon })
+  }, [heat, layer])
   const click = (e) => {
     const p = toSvg(e)
     const [lat, lon] = unproject(p.x, p.y)
@@ -47,9 +81,23 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
   }
   const cp = custom && custom.lat <= LIMIT + 0.5 ? project(custom.lat, custom.lon) : null
   return (
-    <div className="card">
-      <div className="card-head"><h2>South pole</h2><span className="muted">click anywhere to analyse it</span></div>
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="polar" onClick={click} onMouseMove={move} onMouseLeave={() => setHover(null)}>
+    <div className={'card map-card' + (big ? ' big' : '')}>
+      <div className="card-head">
+        <h2>South pole</h2>
+        <div className="seg">
+          <button className={'btn small ' + (is3d ? 'on' : '')} onClick={() => { setFail3d(null); setView('3d') }} title="3D terrain lit by the real Sun">3D</button>
+          <button className={'btn small ' + (!is3d ? 'on' : '')} onClick={() => setView('2d')} title="Flat polar map">2D</button>
+          <button className="btn small" onClick={() => setBig((b) => !b)} title={big ? 'Back to the sidebar (Esc)' : 'Enlarge the map'}>{big ? '✕' : '⤢'}</button>
+        </div>
+      </div>
+      <div className="muted map-hint">{is3d ? 'drag to orbit · right-drag to pan · scroll to zoom · click the ground to analyse it' : 'click anywhere to analyse it'}</div>
+      {fail3d && <div className="muted bad-text">3D view unavailable ({fail3d}), showing the 2D map.</div>}
+      {is3d ? (
+        <Suspense fallback={<div className="t3d-wrap"><div className="t3d"><div className="t3d-loading busy">Loading 3D view…</div></div></div>}>
+          <Terrain3D sites={polar} focus={focus} custom={custom} onFocus={onFocus} onPick={onPick} onHover={hover3d}
+            heat={heat} layer={layer} time={time} limit={LIMIT} expanded={big} onFail={setFail3d} />
+        </Suspense>
+      ) : <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="polar" onClick={click} onMouseMove={move} onMouseLeave={() => setHover(null)}>
         <defs>
           <clipPath id="disk"><circle cx={SIZE / 2} cy={SIZE / 2} r={R} /></clipPath>
           <radialGradient id="moon" cx="50%" cy="50%" r="50%">
@@ -88,7 +136,7 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
           <line x1={cp[0]} x2={cp[0]} y1={cp[1] - 12} y2={cp[1] + 12} stroke="#fff" />
           <title>Custom point</title>
         </g>}
-      </svg>
+      </svg>}
       <div className="layers">
         <div className="seg">
           <button className={'btn small ' + (layer === 'none' ? 'on' : '')} onClick={() => onLayer?.('none')}>Terrain</button>

@@ -171,7 +171,7 @@ export default function App() {
 
       <div className="layout">
         <aside className="side">
-          <div id="sec-map"><PolarMap sites={sites} focus={focus} onFocus={setFocus} custom={custom} onPick={onPick} layer={layer} onLayer={setLayer} /></div>
+          <div id="sec-map"><PolarMap sites={sites} focus={focus} onFocus={setFocus} custom={custom} onPick={onPick} layer={layer} onLayer={setLayer} time={site ? timeAt(site, i).getTime() : null} /></div>
           <SiteList sites={listed} focus={focus} compare={compare} onFocus={setFocus} onToggle={toggleCompare} />
         </aside>
 

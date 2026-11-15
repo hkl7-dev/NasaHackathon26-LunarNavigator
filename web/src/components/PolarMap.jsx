@@ -62,7 +62,7 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
   const hover3d = useCallback((p) => {
     if (!p || !heat || layer === 'none') return setHover(null)
     const val = valueAt(heat, layer, p.lat, p.lon)
-    setHover(Number.isNaN(val) ? null : { val, lat: p.lat, lon: p.lon })
+    setHover(Number.isNaN(val) ? null : { val, lat: p.lat, lon: p.lon, slope: valueAt(heat, 'slope', p.lat, p.lon) })
   }, [heat, layer])
   const click = (e) => {
     const p = toSvg(e)
@@ -77,7 +77,7 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
     const N = heat.N, c = Math.floor(((u + 1) / 2) * N), r = Math.floor(((1 - v) / 2) * N)
     const val = heat[layer][r * N + c]
     const [lat, lon] = unproject(p.x, p.y)
-    setHover(Number.isNaN(val) ? null : { val, lat, lon })
+    setHover(Number.isNaN(val) ? null : { val, lat, lon, slope: heat.slope?.[r * N + c] })
   }
   const cp = custom && custom.lat <= LIMIT + 0.5 ? project(custom.lat, custom.lon) : null
   return (
@@ -145,7 +145,7 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
         {layer !== 'none' && <div className="layer-info">
           {error ? <span className="bad-text">{error}</span>
             : progress < 1 ? <span className="busy">Mapping the whole region… {Math.round(progress * 100)}%</span>
-              : hover ? <span className="mono">{LAYERS[layer].fmt(hover.val)} <span className="muted">{LAYERS[layer].unit} at {hover.lat.toFixed(2)}°, {hover.lon.toFixed(1)}°E</span></span>
+              : hover ? <span className="mono">{LAYERS[layer].fmt(hover.val)} <span className="muted">{layer === 'score' ? `· mean slope ${hover.slope?.toFixed(1)}°` : LAYERS[layer].unit} at {hover.lat.toFixed(2)}°, {hover.lon.toFixed(1)}°E</span></span>
                 : <span className="muted">{LAYERS[layer].unit}, Jan 2026 onward, every 6 h · hover to read, click to analyse</span>}
           <div className="ramp"><span>{LAYERS[layer].fmt(LAYERS[layer].range[0])}</span><i style={{ background: gradientCss(layer) }} /><span>{LAYERS[layer].fmt(LAYERS[layer].range[1])}+</span></div>
         </div>}

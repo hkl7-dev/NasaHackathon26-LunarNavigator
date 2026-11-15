@@ -26,6 +26,17 @@ function makeSampler(fine, coarse) {
   return (x, y) => (x > fx0 && x < fx1 && y < fy0 && y > fy1 ? sampleGrid(fine, x, y) : sampleGrid(coarse, x, y))
 }
 
+// ---- landing score: 0 (bad) .. 1 (good) ----
+// Safe ground first (share of the cell flatter than SAFE_SLOPE, a typical lander tilt limit),
+// then the things a solar lander needs: Sun, a line of sight to Earth, and short nights.
+const SUB = 5, SLOPE_D = 480, SAFE_SLOPE = 8
+const clamp01 = (v) => Math.max(0, Math.min(1, v))
+function landingScore(flatFrac, sun, earth, nightDays) {
+  const sunS = clamp01(sun / 0.7), earthS = clamp01(earth / 0.7), nightS = 1 - clamp01((nightDays - 3) / 17)
+  const resources = 0.4 * sunS + 0.25 * earthS + 0.35 * nightS
+  return clamp01((resources * Math.sqrt(flatFrac)) / 0.6)   // scaled so the best spots near the pole reach ~100
+}
+
 self.onmessage = (ev) => {
   const { dem, vec, cells, mapLimit, everyH = 6, mast = 2 } = ev.data
   const sample = makeSampler(dem.fine, dem.coarse)
@@ -44,7 +55,9 @@ self.onmessage = (ev) => {
   const N = cells
   const sun = new Float32Array(N * N).fill(NaN), earth = new Float32Array(N * N).fill(NaN)
   const both = new Float32Array(N * N).fill(NaN), night = new Float32Array(N * N).fill(NaN)
+  const slope = new Float32Array(N * N).fill(NaN), score = new Float32Array(N * N).fill(NaN)
   const rhoMax = 2 * R * Math.tan(((90 + mapLimit) * D2R) / 2)  // stereographic radius of the map edge, metres
+  const cellM = (2 * rhoMax) / N   // cell size in map metres
   const mask = new Float32Array(NAZ)
   const t0 = performance.now()
 
@@ -96,8 +109,20 @@ self.onmessage = (ev) => {
       }
       const idx = r * N + c
       sun[idx] = ns / T; earth[idx] = ne / T; both[idx] = nb / T; night[idx] = (longest * stepH) / 24
+
+      // terrain slope: 5 x 5 samples spread over the cell, central differences over 480 m
+      let sSum = 0, flat = 0
+      for (let a = 0; a < SUB; a++) for (let b = 0; b < SUB; b++) {
+        const px = x + ((a + 0.5) / SUB - 0.5) * cellM, py = y + ((b + 0.5) / SUB - 0.5) * cellM
+        const gx = (sample(px + SLOPE_D, py) - sample(px - SLOPE_D, py)) / (2 * SLOPE_D)
+        const gy = (sample(px, py + SLOPE_D) - sample(px, py - SLOPE_D)) / (2 * SLOPE_D)
+        const deg = Math.atan(Math.hypot(gx, gy) * kScale) * R2D
+        sSum += deg; if (deg < SAFE_SLOPE) flat++
+      }
+      slope[idx] = sSum / (SUB * SUB)
+      score[idx] = landingScore(flat / (SUB * SUB), sun[idx], earth[idx], night[idx])
     }
-    if (r % 4 === 3 || r === N - 1) self.postMessage({ type: 'progress', done: (r + 1) / N, sun, earth, both, night })
+    if (r % 4 === 3 || r === N - 1) self.postMessage({ type: 'progress', done: (r + 1) / N, sun, earth, both, night, slope, score })
   }
-  self.postMessage({ type: 'done', N, sun, earth, both, night, ms: Math.round(performance.now() - t0), everyH })
+  self.postMessage({ type: 'done', N, sun, earth, both, night, slope, score, ms: Math.round(performance.now() - t0), everyH })
 }

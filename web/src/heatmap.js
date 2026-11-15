@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { loadDem, loadVectors } from './engine.js'
 
 export const LAYERS = {
+  score: { label: 'Landing score', unit: 'landing score: flat ground + Sun + Earth + short nights', fmt: (v) => `${Math.round(v * 100)}/100`, ramp: [[0, [200, 40, 40]], [0.35, [235, 120, 40]], [0.6, [235, 210, 60]], [1, [40, 200, 90]]], range: [0, 0.8] },
   sun: { label: 'Sunlight', unit: '% of time sunlit', fmt: (v) => `${Math.round(v * 100)}%`, ramp: [[0, [12, 12, 22]], [0.25, [90, 30, 70]], [0.5, [200, 70, 40]], [0.75, [250, 170, 40]], [1, [255, 245, 190]]], range: [0, 0.9] },
   earth: { label: 'Earth in view', unit: '% of time Earth visible', fmt: (v) => `${Math.round(v * 100)}%`, ramp: [[0, [10, 12, 24]], [0.5, [30, 90, 170]], [1, [170, 225, 255]]], range: [0, 1] },
   both: { label: 'Sun + Earth', unit: '% of time with both', fmt: (v) => `${Math.round(v * 100)}%`, ramp: [[0, [10, 14, 18]], [0.5, [30, 130, 100]], [1, [170, 255, 210]]], range: [0, 0.6] },

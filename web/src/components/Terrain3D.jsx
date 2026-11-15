@@ -234,11 +234,22 @@ export default function Terrain3D({ sites, focus, custom, onFocus, onPick, onHov
         s.userData.px = on ? 24 : 16; s.scale.setScalar(s.userData.px * w.px); s.position.copy(top); s.renderOrder = 10; s.userData.id = id
         g.add(s)
         const el = document.createElement('div')
-        el.className = 't3d-label' + (on ? ' on' : ''); el.textContent = name
+        el.className = 't3d-label' + (on ? ' on' : '') + (id.startsWith('reg:') ? ' reg' : ''); el.textContent = name
         layerEl.appendChild(el)
         w.labels.push({ pos: top, el })
       }
-      sites.forEach((s) => add(s.id, s.name, s.lat, s.lon, GROUP_COLORS[s.group] || '#ccc', false))
+      sites.forEach((s) => {
+        add(s.id, s.name, s.lat, s.lon, s.color || GROUP_COLORS[s.group] || '#ccc', false)
+        if (s.size_km) {   // region outline draped on the terrain
+          const [cx, cy] = toMap(s.lat, s.lon, w.sg), h = (s.size_km * 1000) / 2, pts = []
+          const corners = [[-h, -h], [h, -h], [h, h], [-h, h], [-h, -h]]
+          for (let k = 0; k < 4; k++) for (let t = 0; t <= 12; t++) {
+            const [ax, ay] = corners[k], [bx, by] = corners[k + 1], x = cx + ax + (bx - ax) * t / 12, y = cy + ay + (by - ay) * t / 12
+            pts.push(new THREE.Vector3(x / 1000, heightAt(w, x, y) + 0.3 + 0.1 * w.exag, -y / 1000))
+          }
+          g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: s.color, transparent: true, opacity: 0.9 })))
+        }
+      })
       if (custom && inside(custom.lat, 0.5)) add('custom', 'Custom point', custom.lat, custom.lon, '#fff', true)
       for (const [lon, t] of [[0, '0°'], [90, '90°E'], [180, '180°'], [-90, '90°W']]) {
         const el = document.createElement('div'); el.className = 't3d-label axis-label'; el.textContent = t

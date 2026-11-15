@@ -146,3 +146,15 @@ code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: va
 .seg-gap { width: 6px; }
 .ice-note { margin-top: 8px; font-size: 12px; line-height: 1.5; color: #cfe3ff; background: #5ea9ff10; border: 1px solid #5ea9ff40; border-radius: 10px; padding: 8px 10px; }
 .ice-note b { color: #d7f3ff; }
+.t3d-label.reg { color: #ffb8ec; font-size: 9.5px; opacity: 0.9; }
+/* Data, validation & uncertainty */
+.data-panel .card-head .seg { flex-wrap: wrap; }
+.val-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.val-wide { grid-column: 1 / -1; }
+.val-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.val-row > div { flex: 1 1 220px; }
+.scatter { width: 200px; max-width: 100%; flex: none; }
+.downloads { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+a.btn { text-decoration: none; display: inline-block; }
+.good-text { color: var(--good); }
+.data-panel a { color: #9fd0ff; }

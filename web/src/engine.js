@@ -53,7 +53,9 @@ function sampleDem(dem, lat, lon) {
   const sg = dem.s ?? -1
   const rho = 2 * R * Math.tan(Math.PI / 4 - (sg * lat * D2R) / 2)
   const x = rho * Math.sin(lon * D2R), y = -sg * rho * Math.cos(lon * D2R)
-  const f = dem.fine, edge = f.size * f.pixel_m
+  const f = dem.fine
+  if (!f) return sampleGrid(dem.coarse, x, y)   // coarse-only terrain (resolution sensitivity check)
+  const edge = f.size * f.pixel_m
   if (x > f.x0 + f.pixel_m && x < f.x0 + edge - f.pixel_m && y < f.y0 - f.pixel_m && y > f.y0 - edge + f.pixel_m) return sampleGrid(f, x, y)
   return sampleGrid(dem.coarse, x, y)
 }

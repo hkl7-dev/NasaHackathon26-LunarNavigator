@@ -1,0 +1,44 @@
+[
+  {
+    "site": "apollo11",
+    "body": "sun",
+    "max_del_deg": 5.899156477084944e-06,
+    "max_daz_deg": 0.0005102490262345327,
+    "n": 120
+  },
+  {
+    "site": "apollo11",
+    "body": "earth",
+    "max_del_deg": 4.324406987166185e-06,
+    "max_daz_deg": 3.676809853914165e-05,
+    "n": 120
+  },
+  {
+    "site": "haworth",
+    "body": "sun",
+    "max_del_deg": 1.3175868262882418e-05,
+    "max_daz_deg": 4.695023449130531e-06,
+    "n": 120
+  },
+  {
+    "site": "haworth",
+    "body": "earth",
+    "max_del_deg": 1.2673591411882512e-05,
+    "max_daz_deg": 3.918045365480793e-06,
+    "n": 120
+  },
+  {
+    "site": "chandrayaan3",
+    "body": "sun",
+    "max_del_deg": 1.356717218392589e-05,
+    "max_daz_deg": 4.868245838451912e-06,
+    "n": 120
+  },
+  {
+    "site": "chandrayaan3",
+    "body": "earth",
+    "max_del_deg": 1.3153538976240498e-05,
+    "max_daz_deg": 1.9124584014207358e-06,
+    "n": 120
+  }
+]

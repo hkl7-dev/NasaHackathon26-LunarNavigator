@@ -21,3 +21,25 @@ Skyfield downloads these automatically on first run if they're missing. Pre-down
 ## Visual cross-checks
 - LROC Quickmap: https://quickmap.lroc.asu.edu (illumination and slope layers)
 - NASA Moon Trek: https://trek.nasa.gov/moon
+
+## LOLA north polar DEM → `dem/`
+- https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/LDEM_75N_240M.IMG and `.LBL`
+- Convert for the web app: `python -m engine.export_north`
+
+## Reference maps for validation and ice evidence → `dem/ref/`
+All optional. Convert with `python -m engine.import_reference` (writes `public/data/ref_south.json` / `ref_north.json`).
+
+| What | Files | Where |
+|---|---|---|
+| LOLA average solar illumination (Mazarico et al. 2011, 2016 release, 18.6-yr average) | `AVGVISIB_65S_240M_201608.IMG/.LBL`, `AVGVISIB_65N_240M_201608.IMG/.LBL` (82 MB each) | https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/ |
+| LOLA average Earth visibility | `AVGVISIB_65S_240M_201608_EARTH.IMG/.LBL`, `..._65N_..._EARTH` | same folder |
+| LOLA permanently shadowed regions | `LPSR_65S_240M_201608.IMG/.LBL`, `LPSR_65N_240M_201608.IMG/.LBL` | same folder |
+| LOLA slope | `LDSM_75S_240M.IMG/.LBL`, `LDSM_75N_240M.IMG/.LBL` (29 MB each) | https://imbrium.mit.edu/DATA/LOLA_GDR/POLAR/IMG/ |
+| Diviner Polar Resource Product (annual max temperature; optional, 605 MB each) | `dlre_prp_south.tab/.lbl`, `dlre_prp_north.tab/.lbl`, plus the `DLRE_PRP.FMT` column file from the volume's `label/` folder | https://pds-geosciences.wustl.edu/lro/lro-l-dlre-4-rdr-v1/lrodlr_1001/data/prp/ |
+
+## Artemis III candidate regions → `public/data/artemis3_regions.json`
+NASA's nine regions (Oct 28, 2024): https://www.nasa.gov/news-release/nasa-provides-update-on-artemis-iii-moon-landing-regions/
+Fill in each region's centre latitude/longitude; the app scores 7 × 7 spots in a 15 km square around it.
+
+## Ephemeris validation
+`public/data/validation_horizons.json` is a copy of `data/validation.json` (our Sun/Earth directions vs JPL Horizons), shown in the app's Validation tab.

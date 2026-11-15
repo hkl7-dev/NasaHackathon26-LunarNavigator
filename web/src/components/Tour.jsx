@@ -25,7 +25,7 @@ export const STEPS = [
   },
   {
     title: 'Raise the panel, shorten the night',
-    text: 'Back on the ridge, we put the solar panel on a 30 m mast. The app recomputes the horizon from the terrain in your browser: the panel now sees over nearby hills. In our model the longest night here drops from about 18 days to under 3, and the battery needed falls from roughly 150 kg to about 25 kg.',
+    text: 'Back on the ridge, we put the solar panel on a 30 m mast. The app recomputes the horizon from the terrain in your browser: the panel now sees over nearby hills. The ridge is already sunlit about 92% of the time, so the gain here is modest: the longest night drops from about 4 days to under 3, and the battery needed falls from roughly 33 kg to about 24 kg.',
     target: 'sec-dome', go: (a) => { a.focus('shackleton_ridge'); a.mast(30) },
   },
   {

@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { GROUP_COLORS } from '../lib.js'
-import { LAYERS, useHeatmap, renderLayer, gradientCss } from '../heatmap.js'
+import { LAYERS, useHeatmap, renderLayer, gradientCss, loadRegions, evidenceSources } from '../heatmap.js'
 
 // Polar stereographic maps, 90°E to the right, as in the LOLA polar products:
 // south pole with 0°E at the top, north pole with 0°E at the bottom. sg = -1 south, +1 north.
@@ -34,6 +34,8 @@ export const NORTH_FEATURES = [
   { id: 'feat:plaskett', name: 'Plaskett', lat: 82.1, lon: 174.3 },
 ].map((f) => ({ ...f, group: 'Shadowed crater' }))
 
+export const REGION_COLOR = '#ff7ad9'
+
 const Terrain3D = lazy(() => import('./Terrain3D.jsx'))
 
 function hasWebGL() {
@@ -63,15 +65,25 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
   const [pole, setPole] = useState(() => (custom && custom.lat > 0 && location.hash.includes('site=custom') ? 'north' : 'south'))
   const { sg, limit: LIMIT, title } = POLES[pole]
   const inside = (lat, pad = 0) => sg * lat >= sg * LIMIT - pad
+  const [regionList, setRegionList] = useState([])
+  useEffect(() => { loadRegions().then((r) => setRegionList((r.regions || []).filter((g) => g.lat != null && g.lon != null))) }, [])
+  const { heat, progress, error, regions: scored, ref } = useHeatmap(layer !== 'none', { mapLimit: LIMIT, pole })
+  // Artemis III candidate regions: marker at the centre; clicking analyses the best-scoring spot inside
+  const regionMarks = useMemo(() => regionList.filter((g) => Math.sign(g.lat) === sg)
+    .map((g) => ({ id: 'reg:' + g.id, name: g.name, lat: g.lat, lon: g.lon, size_km: g.size_km ?? 15, group: 'Artemis III candidate', color: REGION_COLOR })), [regionList, sg])
   const polar = useMemo(() => (pole === 'north'
     ? [...sites.filter((s) => s.lat >= EDGE - 0.5), ...NORTH_FEATURES]
-    : sites.filter((s) => s.lat <= -EDGE + 0.5)), [sites, pole])
-  const { heat, progress, error } = useHeatmap(layer !== 'none', { mapLimit: LIMIT, pole })
-  // named craters are not curated sites: clicking one runs the full analysis at that spot
+    : [...sites.filter((s) => s.lat <= -EDGE + 0.5), ...regionMarks]), [sites, pole, regionMarks])
+  // named craters and regions are not curated sites: clicking one runs the full analysis at that spot
   const focusOrPick = useCallback((id) => {
     const f = NORTH_FEATURES.find((x) => x.id === id)
-    if (f) onPick(f.lat, f.lon); else onFocus(id)
-  }, [onFocus, onPick])
+    if (f) return onPick(f.lat, f.lon)
+    if (id.startsWith('reg:')) {
+      const g = scored?.find((x) => 'reg:' + x.id === id), m = regionMarks.find((x) => x.id === id)
+      return g ? onPick(g.best.lat, g.best.lon) : m && onPick(m.lat, m.lon)
+    }
+    onFocus(id)
+  }, [onFocus, onPick, scored, regionMarks])
   const switchPole = (p) => {
     if (p === pole) return
     setPole(p); setHover(null); setFail3d(null)
@@ -155,11 +167,15 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
           return <text key={t} x={x} y={y} className="tiny" textAnchor="middle" dominantBaseline="middle">{t}</text>
         })}
         <text x={SIZE / 2} y={SIZE / 2 - 5} className="tiny" textAnchor="middle">✕ pole</text>
+        {regionMarks.map((g) => {
+          const [x, y] = project(g.lat, g.lon, sg), half = (g.size_km * 1000 / 2) / (2 * 1737400 * Math.tan(((90 - EDGE) * Math.PI) / 360)) * R
+          return <rect key={'box' + g.id} x={x - half} y={y - half} width={2 * half} height={2 * half} fill="none" stroke={REGION_COLOR} strokeWidth="1" opacity="0.8" pointerEvents="none" />
+        })}
         {polar.map((s) => {
           const [x, y] = project(s.lat, s.lon, sg)
           const on = s.id === focus
           return <g key={s.id} onClick={(e) => { e.stopPropagation(); focusOrPick(s.id) }} style={{ cursor: 'pointer' }}>
-            <circle cx={x} cy={y} r={on ? 8 : 5.5} fill={GROUP_COLORS[s.group] || '#ccc'} stroke={on ? '#fff' : '#0008'} strokeWidth={on ? 2 : 1} />
+            <circle cx={x} cy={y} r={on ? 8 : 5.5} fill={s.color || GROUP_COLORS[s.group] || '#ccc'} stroke={on ? '#fff' : '#0008'} strokeWidth={on ? 2 : 1} />
             <title>{s.name}</title>
           </g>
         })}
@@ -184,7 +200,8 @@ export default function PolarMap({ sites, focus, onFocus, custom, onPick, layer 
         {layer !== 'none' && <div className="layer-info">
           {error ? <span className="bad-text">{error}</span>
             : progress < 1 ? <span className="busy">Mapping the whole region… {Math.round(progress * 100)}%</span>
-              : hover ? <span className="mono">{LAYERS[layer].fmt(hover.val)} <span className="muted">{layer === 'score' ? `· mean slope ${hover.slope?.toFixed(1)}°` : layer === 'ice' ? '' : LAYERS[layer].unit} at {hover.lat.toFixed(2)}°, {hover.lon.toFixed(1)}°E</span></span>
+              : hover ? <span className="mono">{LAYERS[layer].fmt(hover.val)} <span className="muted">{layer === 'score' ? `· mean slope ${hover.slope?.toFixed(1)}°` : layer === 'evidence' ? `of ${evidenceSources(ref).length} datasets` : layer === 'ice' ? '' : LAYERS[layer].unit} at {hover.lat.toFixed(2)}°, {hover.lon.toFixed(1)}°E</span></span>
+                : layer === 'evidence' ? <span className="muted">Datasets combined: {evidenceSources(ref).join(', ')}{!ref && ' (import NASA maps with engine.import_reference to add more)'} · hover to read</span>
                 : <span className="muted">{LAYERS[layer].unit}, Jan 2026 onward, every 6 h · hover to read, click to analyse</span>}
           <div className="ramp"><span>{LAYERS[layer].fmt(LAYERS[layer].range[0])}</span><i style={{ background: gradientCss(layer) }} /><span>{LAYERS[layer].fmt(LAYERS[layer].range[1])}+</span></div>
         </div>}

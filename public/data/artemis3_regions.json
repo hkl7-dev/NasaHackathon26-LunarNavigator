@@ -1,0 +1,13 @@
+{
+  "about": "NASA's nine Artemis III candidate landing regions (Oct 28, 2024), all within about 6 degrees of the south pole. NASA has not published region centres, so each search area is placed on the feature the region is named after (IAU / USGS Gazetteer coordinates) and made large enough to contain it. The app scores spots across each search area and ranks regions by their best spot. Replace lat/lon/size_km with NASA's exact regions if you get them.",
+  "source": "search areas centred on the named features (USGS Gazetteer of Planetary Nomenclature), not NASA's exact region outlines",
+  "regions": [
+    { "id": "cabeus_b_peak", "name": "Peak near Cabeus B", "lat": -82.4, "lon": -53.0, "size_km": 70, "placed_on": "Cabeus B crater (USGS Gazetteer #8058), 61 km" },
+    { "id": "haworth", "name": "Haworth", "lat": -86.9, "lon": -4.0, "size_km": 60, "placed_on": "Haworth crater, 51 km (Wikipedia / IAU)" },
+    { "id": "malapert_massif", "name": "Malapert Massif", "lat": -86.0, "lon": 2.9, "size_km": 30, "placed_on": "Malapert Massif summit area (project site list; unofficial name)" },
+    { "id": "mons_mouton", "name": "Mons Mouton + Mons Mouton Plateau", "lat": -84.6, "lon": 31.0, "size_km": 60, "placed_on": "Mons Mouton (USGS Gazetteer #16070); two NASA regions on the same mountain" },
+    { "id": "nobile_rim", "name": "Nobile Rim 1 + Nobile Rim 2", "lat": -85.28, "lon": 53.27, "size_km": 95, "placed_on": "Nobile crater (USGS Gazetteer #4321), 79 km; two NASA regions on its rim" },
+    { "id": "de_gerlache_rim_2", "name": "de Gerlache Rim 2", "lat": -88.5, "lon": -87.1, "size_km": 45, "placed_on": "de Gerlache crater (USGS Gazetteer #1439), 32 km" },
+    { "id": "slater_plain", "name": "Slater Plain", "lat": -88.08, "lon": 111.29, "size_km": 35, "placed_on": "Slater crater, 25 km (Wikipedia / IAU)" }
+  ]
+}

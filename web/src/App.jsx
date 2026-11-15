@@ -11,6 +11,7 @@ import LandingAnalysis from './components/LandingAnalysis.jsx'
 import { Callout, Intro } from './components/Explain.jsx'
 import DesignPanel from './components/DesignPanel.jsx'
 import Tour from './components/Tour.jsx'
+import DataPanel from './components/DataPanel.jsx'
 import { DEFAULT_DESIGN, PRESETS, applyDesign, isDefault, designKey } from './design.js'
 
 const SPEEDS = [1, 6, 24]  // hours advanced per animation tick
@@ -230,6 +231,7 @@ export default function App() {
 
           {explain && compare.length > 1 && <Callout on k="compare" />}
           <div id="sec-compare"><Compare ids={compare} cache={designedCache} i={i} /></div>
+          <DataPanel site={site} onPick={onPick} />
           {tour != null && <Tour step={tour} setStep={setTour} api={tourApi} />}
         </main>
       </div>

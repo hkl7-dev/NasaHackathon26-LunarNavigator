@@ -12,6 +12,7 @@ import { Callout, Intro } from './components/Explain.jsx'
 import DesignPanel from './components/DesignPanel.jsx'
 import Tour from './components/Tour.jsx'
 import DataPanel from './components/DataPanel.jsx'
+import logo from './assets/moonle-logo.png'
 import { DEFAULT_DESIGN, PRESETS, applyDesign, isDefault, designKey } from './design.js'
 
 const SPEEDS = [1, 6, 24]  // hours advanced per animation tick
@@ -158,7 +159,7 @@ export default function App() {
     <div className="app">
       <header className="top">
         <div>
-          <h1>Lunar Landing Site Navigator</h1>
+          <h1 className="brand"><img src={logo} alt="moonle, Lunar Landing Site Navigator" /></h1>
           <p className="sub">Sun, Earth, power and comms at any lunar landing site and date. Terrain from LOLA, ephemeris validated against JPL Horizons.</p>
         </div>
         <div className="top-right">
